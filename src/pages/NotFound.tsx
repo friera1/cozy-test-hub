@@ -1,11 +1,14 @@
 
 import React, { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AnimatedButton from "@/components/ui/AnimatedButton";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     console.error(
@@ -15,7 +18,10 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background to-secondary/30 px-6 text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/30 px-6 text-center">
+      <div className="mb-6">
+        <Shield className="h-16 w-16 text-primary mx-auto" />
+      </div>
       <h1 className="text-8xl font-bold mb-6 text-primary">404</h1>
       <div className="max-w-md space-y-4 mb-8">
         <h2 className="text-3xl font-semibold">Page not found</h2>
@@ -24,11 +30,11 @@ const NotFound = () => {
         </p>
       </div>
       <AnimatedButton 
-        href="/" 
+        href={isAuthenticated ? "/dashboard" : "/"} 
         icon={<ArrowLeft size={18} />} 
         iconPosition="left"
       >
-        Return Home
+        {isAuthenticated ? "Return to Dashboard" : "Return to Login"}
       </AnimatedButton>
       
       {/* Background decorative elements */}
