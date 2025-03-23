@@ -216,7 +216,7 @@ const Dashboard = () => {
 
       {/* Loading Dialog */}
       <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
-        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Fetching Game Statistics</DialogTitle>
             <DialogDescription>
