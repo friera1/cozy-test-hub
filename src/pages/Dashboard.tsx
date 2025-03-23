@@ -52,10 +52,12 @@ const Dashboard = () => {
       return;
     }
     
+    console.log('Saving game account with ID:', gameId, 'and nickname:', nickname);
     setShowLoadingDialog(true);
 
     try {
       const result = await saveGameAccount(gameId, nickname);
+      console.log('Save game account result:', result);
       
       if (result.success && result.stats) {
         // Update the local state with new account data
@@ -63,9 +65,12 @@ const Dashboard = () => {
         setAccountData(updatedAccount);
         toast.success("Game account information saved successfully!");
       } else {
-        toast.error(error || "Failed to save game account information");
+        const errorMessage = error || "Failed to save game account information";
+        console.error('Error saving game account:', errorMessage);
+        toast.error(errorMessage);
       }
     } catch (err) {
+      console.error('Exception while saving game account:', err);
       toast.error("An error occurred while saving game account information");
     } finally {
       setShowLoadingDialog(false);

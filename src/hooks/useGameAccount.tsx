@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { encryptData, decryptData } from '@/utils/crypto';
 import { getCharacterStats, GameCharacterStats, GameCharacterParams } from '@/utils/gameApi';
+import { toast } from 'sonner';
 
 export interface GameAccount {
   gameId: string;
@@ -34,10 +35,15 @@ export const useGameAccount = () => {
   };
 
   const saveGameAccount = async (gameId: string, nickname: string): Promise<{ success: boolean; stats?: GameCharacterStats }> => {
-    if (!username) return { success: false };
+    if (!username) {
+      setError('User not authenticated');
+      return { success: false };
+    }
     
     setIsLoading(true);
     setError(null);
+    
+    console.log('Saving game account with ID:', gameId, 'and nickname:', nickname);
     
     try {
       // Fetch stats from the API
@@ -46,10 +52,15 @@ export const useGameAccount = () => {
         nickname: nickname
       };
       
+      console.log('Calling getCharacterStats with params:', params);
       const stats = await getCharacterStats(params);
+      console.log('API response stats:', stats);
       
       if (!stats.success) {
-        setError(stats.error || 'Failed to fetch game statistics');
+        const errorMessage = stats.error || 'Failed to fetch game statistics';
+        console.error(errorMessage);
+        setError(errorMessage);
+        setIsLoading(false);
         return { success: false };
       }
       
@@ -60,13 +71,15 @@ export const useGameAccount = () => {
         [username]: { gameId, nickname, stats }
       };
       
+      console.log('Saving account data to localStorage:', updatedData);
       saveGameAccountsData(updatedData);
       
       setIsLoading(false);
       return { success: true, stats };
     } catch (error) {
       console.error('Error saving game account:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(errorMessage);
       setIsLoading(false);
       return { success: false };
     }
@@ -75,8 +88,11 @@ export const useGameAccount = () => {
   const getGameAccount = async (): Promise<GameAccount | null> => {
     if (!username) return null;
     
+    console.log('Getting game account for user:', username);
     const gameAccountsData = getGameAccountsData();
-    return gameAccountsData[username] || null;
+    const account = gameAccountsData[username] || null;
+    console.log('Retrieved account:', account);
+    return account;
   };
 
   return {
