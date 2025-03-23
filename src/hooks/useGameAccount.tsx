@@ -37,6 +37,7 @@ export const useGameAccount = () => {
   const saveGameAccount = async (gameId: string, nickname: string): Promise<{ success: boolean; stats?: GameCharacterStats }> => {
     if (!username) {
       setError('User not authenticated');
+      toast.error('User not authenticated');
       return { success: false };
     }
     
@@ -60,6 +61,7 @@ export const useGameAccount = () => {
         const errorMessage = stats.error || 'Failed to fetch game statistics';
         console.error(errorMessage);
         setError(errorMessage);
+        toast.error(errorMessage);
         setIsLoading(false);
         return { success: false };
       }
@@ -74,12 +76,14 @@ export const useGameAccount = () => {
       console.log('Saving account data to localStorage:', updatedData);
       saveGameAccountsData(updatedData);
       
+      toast.success('Game account information saved successfully!');
       setIsLoading(false);
       return { success: true, stats };
     } catch (error) {
       console.error('Error saving game account:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMessage);
+      toast.error(`Error saving game account: ${errorMessage}`);
       setIsLoading(false);
       return { success: false };
     }

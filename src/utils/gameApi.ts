@@ -58,7 +58,7 @@ export const getCharacterStats = async (params: GameCharacterParams): Promise<Ga
       };
     }
 
-    console.log('Token generated successfully');
+    console.log('Token generated successfully:', token);
 
     // Step 2: Get character info using token
     return await getCharacterInfo(token);
@@ -79,29 +79,37 @@ export const getCharacterStats = async (params: GameCharacterParams): Promise<Ga
 // Generate a token for API access
 const generateToken = async (params: GameCharacterParams): Promise<string | null> => {
   console.log('Generating token with params:', params);
-  const paramsStr = JSON.stringify(params);
-  const paramsBase64 = btoa(toBinaryStr(paramsStr));
-  const sign = hmacSHA256(paramsStr, API_SECRET);
-
-  console.log('Encoded payload:', paramsBase64);
-  console.log('Sign:', sign);
-
-  const formData = new FormData();
-  formData.append('encoded_payload', paramsBase64);
-  formData.append('sign', sign);
-
+  
   try {
+    const paramsStr = JSON.stringify(params);
+    const paramsBase64 = btoa(toBinaryStr(paramsStr));
+    const sign = hmacSHA256(paramsStr, API_SECRET);
+
+    console.log('API Request Details:');
+    console.log('- URL:', `${API_BASE_URL}/tgs/gateway2/character/litetoken?client_id=${CLIENT_ID}`);
+    console.log('- Encoded payload:', paramsBase64);
+    console.log('- Sign:', sign);
+
+    // Create FormData object for the request
+    const formData = new FormData();
+    formData.append('encoded_payload', paramsBase64);
+    formData.append('sign', sign);
+
+    // Make the API request
     const response = await fetch(
       `${API_BASE_URL}/tgs/gateway2/character/litetoken?client_id=${CLIENT_ID}`,
       {
         method: 'POST',
-        body: formData
+        body: formData,
+        // Don't set Content-Type header for FormData
       }
     );
 
     console.log('Token API response status:', response.status);
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Token API error text:', errorText);
       throw new Error(`API error: ${response.status}`);
     }
 
@@ -135,6 +143,8 @@ const getCharacterInfo = async (token: string): Promise<GameCharacterStats> => {
     console.log('Character info API response status:', response.status);
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Character info API error text:', errorText);
       throw new Error(`API error: ${response.status}`);
     }
 
