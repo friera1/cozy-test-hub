@@ -6,17 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Shield, LogOut, Save, User, Gamepad2 } from "lucide-react";
+import { Shield, LogOut, Save, User, Gamepad2, Server, ZapIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useGameAccount } from "@/hooks/useGameAccount";
+import { useGameAccount, GameAccount } from "@/hooks/useGameAccount";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { isAuthenticated, logout, username } = useAuth();
-  const { saveGameAccount, getGameAccount } = useGameAccount();
-  const [isLoading, setIsLoading] = useState(false);
+  const { saveGameAccount, getGameAccount, isLoading, error } = useGameAccount();
   const [gameId, setGameId] = useState("");
   const [nickname, setNickname] = useState("");
+  const [accountData, setAccountData] = useState<GameAccount | null>(null);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -26,10 +28,11 @@ const Dashboard = () => {
 
     // Load existing game account data if available
     const loadGameAccount = async () => {
-      const accountData = await getGameAccount();
-      if (accountData) {
-        setGameId(accountData.gameId);
-        setNickname(accountData.nickname);
+      const data = await getGameAccount();
+      if (data) {
+        setGameId(data.gameId);
+        setNickname(data.nickname);
+        setAccountData(data);
       }
     };
 
@@ -43,15 +46,29 @@ const Dashboard = () => {
 
   const handleSaveGameAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    if (!gameId.trim() || !nickname.trim()) {
+      toast.error("Please enter both Game ID and Nickname");
+      return;
+    }
+    
+    setShowLoadingDialog(true);
 
     try {
-      await saveGameAccount(gameId, nickname);
-      toast.success("Game account information saved successfully!");
-    } catch (error) {
-      toast.error("Failed to save game account information");
+      const result = await saveGameAccount(gameId, nickname);
+      
+      if (result.success && result.stats) {
+        // Update the local state with new account data
+        const updatedAccount = { gameId, nickname, stats: result.stats };
+        setAccountData(updatedAccount);
+        toast.success("Game account information saved successfully!");
+      } else {
+        toast.error(error || "Failed to save game account information");
+      }
+    } catch (err) {
+      toast.error("An error occurred while saving game account information");
     } finally {
-      setIsLoading(false);
+      setShowLoadingDialog(false);
     }
   };
 
@@ -141,24 +158,44 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {gameId ? (
+                {accountData?.stats ? (
                   <div className="space-y-4">
+                    <div className="rounded-lg border p-3">
+                      <div className="text-sm font-medium text-muted-foreground">Server</div>
+                      <div className="text-2xl font-bold flex items-center gap-2">
+                        <Server className="h-5 w-5 text-primary" />
+                        {accountData.stats.server}
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
                       <div className="rounded-lg border p-3">
                         <div className="text-sm font-medium text-muted-foreground">Level</div>
-                        <div className="text-2xl font-bold">25</div>
+                        <div className="text-2xl font-bold">{accountData.stats.level}</div>
                       </div>
+                      
                       <div className="rounded-lg border p-3">
-                        <div className="text-sm font-medium text-muted-foreground">Rank</div>
-                        <div className="text-2xl font-bold">Gold</div>
+                        <div className="text-sm font-medium text-muted-foreground">Power</div>
+                        <div className="text-2xl font-bold flex items-center gap-2">
+                          <ZapIcon className="h-5 w-5 text-amber-500" />
+                          {accountData.stats.power}
+                        </div>
                       </div>
+                      
                       <div className="rounded-lg border p-3">
-                        <div className="text-sm font-medium text-muted-foreground">Battles</div>
-                        <div className="text-2xl font-bold">158</div>
+                        <div className="text-sm font-medium text-muted-foreground">Max Power</div>
+                        <div className="text-2xl font-bold flex items-center gap-2">
+                          <ZapIcon className="h-5 w-5 text-red-500" />
+                          {accountData.stats.maxPower}
+                        </div>
                       </div>
+                      
                       <div className="rounded-lg border p-3">
-                        <div className="text-sm font-medium text-muted-foreground">Win Rate</div>
-                        <div className="text-2xl font-bold">72%</div>
+                        <div className="text-sm font-medium text-muted-foreground">Hidden Power</div>
+                        <div className="text-2xl font-bold flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-purple-500" />
+                          {accountData.stats.hiddenPower}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -176,6 +213,21 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Loading Dialog */}
+      <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Fetching Game Statistics</DialogTitle>
+            <DialogDescription>
+              Connecting to Kingdom Guard servers...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-6">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

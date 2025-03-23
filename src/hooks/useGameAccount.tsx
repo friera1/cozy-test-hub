@@ -1,14 +1,19 @@
 
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { encryptData, decryptData } from '@/utils/crypto';
+import { getCharacterStats, GameCharacterStats, GameCharacterParams } from '@/utils/gameApi';
 
-interface GameAccount {
+export interface GameAccount {
   gameId: string;
   nickname: string;
+  stats?: GameCharacterStats;
 }
 
 export const useGameAccount = () => {
   const { username } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const getGameAccountsData = (): Record<string, GameAccount> => {
     const encryptedData = localStorage.getItem('gameAccountsData');
@@ -28,17 +33,43 @@ export const useGameAccount = () => {
     localStorage.setItem('gameAccountsData', encrypted);
   };
 
-  const saveGameAccount = async (gameId: string, nickname: string): Promise<boolean> => {
-    if (!username) return false;
+  const saveGameAccount = async (gameId: string, nickname: string): Promise<{ success: boolean; stats?: GameCharacterStats }> => {
+    if (!username) return { success: false };
     
-    const gameAccountsData = getGameAccountsData();
-    const updatedData = { 
-      ...gameAccountsData, 
-      [username]: { gameId, nickname }
-    };
+    setIsLoading(true);
+    setError(null);
     
-    saveGameAccountsData(updatedData);
-    return true;
+    try {
+      // Fetch stats from the API
+      const params: GameCharacterParams = {
+        character_id: gameId,
+        nickname: nickname
+      };
+      
+      const stats = await getCharacterStats(params);
+      
+      if (!stats.success) {
+        setError(stats.error || 'Failed to fetch game statistics');
+        return { success: false };
+      }
+      
+      // Save the account with the stats
+      const gameAccountsData = getGameAccountsData();
+      const updatedData = { 
+        ...gameAccountsData, 
+        [username]: { gameId, nickname, stats }
+      };
+      
+      saveGameAccountsData(updatedData);
+      
+      setIsLoading(false);
+      return { success: true, stats };
+    } catch (error) {
+      console.error('Error saving game account:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      setIsLoading(false);
+      return { success: false };
+    }
   };
 
   const getGameAccount = async (): Promise<GameAccount | null> => {
@@ -51,5 +82,7 @@ export const useGameAccount = () => {
   return {
     saveGameAccount,
     getGameAccount,
+    isLoading,
+    error
   };
 };
